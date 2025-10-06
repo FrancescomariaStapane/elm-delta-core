@@ -71,12 +71,12 @@ def print_results(results: list[Experiment]):
             f.write("results for " + experiment.name + "\n")
             f.write("\n")
             for info in experiment.experiment_infos:
-                f.write(str(info.name + ": ",info.value + "\n"))
-            f.write(str("number of measurements: " + experiment.repeated_measurements[0].get_n_of_measurements() + "\n"))
+                f.write(str(info.name + ": " + str(info.value) + "\n"))
+            f.write(str("number of measurements: " + str(experiment.repeated_measurements[0].get_n_of_measurements()) + "\n"))
             for measurement in experiment.repeated_measurements:
                 f.write("\n")
-                f.write("mean " + measurement.name + ": " + measurement.get_mean() + "\n")
-                f.write("std " + measurement.name + ": " + measurement.get_std() + "\n")
+                f.write("mean " + measurement.name + ": " + str(measurement.get_mean()) + "\n")
+                f.write("std " + measurement.name + ": " + str(measurement.get_std()) + "\n")
                 # print("median ",measurement.name, ": ",measurement.get_median())
 
 
