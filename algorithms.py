@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+
 from ELM_CrossEntropy import *
 from codecarbon import OfflineEmissionsTracker
 import pandas as pd
@@ -9,12 +10,19 @@ import hpelm
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
+import resource
+
+INFINITY = 10**12
+# INFINITY = 10**10
+AS_LIMIT = 0.3 * 1024 ** 3
+
 class MlAlgorithm(ABC):
     def __init__(self, xtr, ytr, xts, yts):
         self.xtr = xtr
         self.ytr = ytr
         self.xts = xts
         self.yts = yts
+        self.valid = True
     @abstractmethod
     def learn(self):
         pass
@@ -154,49 +162,66 @@ def sse(y_real, y_predict):
     # y_real, y_predict = y_real.detach.clone(), y_predict.detach.clone()
     return torch.sum((y_predict - y_real) ** 2)
 def sigmoid(X, W, b):
-    z = torch.matmul(X, W) + b
+    z = safe_matmul(X, W) + b
     return torch.sigmoid(z)
+
 class Elm(MlAlgorithm):
     def __init__(self, xtr, ytr, xts, yts, n_neurons, lmbda):
         super().__init__(xtr, ytr, xts, yts)
-        # target normalization
-        self.interval = torch.cat([ytr, yts]).max() - torch.cat([ytr, yts]).min()
-        self.target_normalization = True
-        if self.target_normalization:
-            self.y_mean = self.ytr.mean()
-            self.y_std = self.ytr.std()
-            self.ytr = (self.ytr - self.y_mean) / self.y_std
-        self.input_dimension = len(self.xtr[0])
-        self.n_neurons = n_neurons
-        self.W = torch.randn(self.input_dimension, self.n_neurons)
-        self.b = torch.randn(1, self.n_neurons)
-        self.h = sigmoid(self.xtr, self.W, self.b)
-        self.lmbda = lmbda
+        try:
+            # print("limit: ", resource.getrlimit(resource.RLIMIT_AS))
+            # target normalization
+            self.interval = torch.cat([ytr, yts]).max() - torch.cat([ytr, yts]).min()
+            self.target_normalization = True
+            if self.target_normalization:
+                self.y_mean = self.ytr.mean()
+                self.y_std = self.ytr.std()
+                self.ytr = (self.ytr - self.y_mean) / self.y_std
+            self.input_dimension = len(self.xtr[0])
+            self.n_neurons = n_neurons
+            self.W = torch.randn(self.input_dimension, self.n_neurons)
+            self.b = torch.randn(1, self.n_neurons)
+            self.h = sigmoid(self.xtr, self.W, self.b)
+            self.lmbda = lmbda
+        except MemoryError:
+            self.valid = False
+
     def learn(self):
-        h_transpose = self.h.T
-        train_time, train_energy, self.beta = run_with_measurement(lambda:
-            torch.matmul(
-            torch.inverse(torch.matmul(h_transpose, self.h) + self.lmbda * torch.eye(self.n_neurons)),
-            torch.matmul(h_transpose, self.ytr)
-        ))
-        A = torch.matmul(h_transpose, self.h) + self.lmbda * torch.eye(self.n_neurons)
-        b = torch.matmul(h_transpose, self.ytr)
-        self.beta = torch.linalg.solve(A, b)
-        return train_time, train_energy
+        if self.valid:
+            try:
+                h_transpose = self.h.T
+                train_time, train_energy, self.beta = run_with_measurement(lambda:
+                    safe_matmul(
+                    torch.inverse(safe_matmul(h_transpose, self.h) + self.lmbda * torch.eye(self.n_neurons)),
+                    safe_matmul(h_transpose, self.ytr)
+                ))
+                A = safe_matmul(h_transpose, self.h) + self.lmbda * torch.eye(self.n_neurons)
+                b = safe_matmul(h_transpose, self.ytr)
+                self.beta = torch.linalg.solve(A, b)
+                return train_time, train_energy
+            except MemoryError:
+                self.valid = False
+        return INFINITY, INFINITY
 
     def test(self):
-        h = sigmoid(self.xts, self.W, self.b)
-        test_time, test_energy, y_pred = run_with_measurement(lambda: torch.matmul(h,self.beta))
-        if self.target_normalization:
-            y_pred = y_pred * self.y_std + self.y_mean
-        loss = sse(self.yts , y_pred)
-        mean_loss = loss / self.yts.size(0)
-        rae_ = rae(self.yts, y_pred)
-        return test_time, test_energy, (mean_loss, rae_)
+        if self.valid:
+            h = sigmoid(self.xts, self.W, self.b)
+            test_time, test_energy, y_pred = run_with_measurement(lambda: safe_matmul(h,self.beta))
+            if self.target_normalization:
+                y_pred = y_pred * self.y_std + self.y_mean
+            loss = sse(self.yts , y_pred)
+            mean_loss = loss / self.yts.size(0)
+            rae_ = rae(self.yts, y_pred)
+            return test_time, test_energy, (mean_loss, rae_)
+        return INFINITY, INFINITY, (INFINITY, INFINITY)
     def refresh(self):
-        self.W = torch.randn(self.input_dimension, self.n_neurons)
-        self.b = torch.randn(1, self.n_neurons)
-        self.h = sigmoid(self.xtr, self.W, self.b)
+            self.valid = True
+            self.W = torch.randn(self.input_dimension, self.n_neurons)
+            self.b = torch.randn(1, self.n_neurons)
+            try:
+                self.h = sigmoid(self.xtr, self.W, self.b)
+            except MemoryError:
+                self.valid = False
 
     def get_default_accuracy(self):
         pass
@@ -323,8 +348,8 @@ class LR(MlAlgorithm):
         y = self.ytr
 
         # Normal Equation with optional ridge regularization
-        XTX = torch.matmul(X.T, X) + self.lmbda * torch.eye(self.input_dimension)
-        XTy = torch.matmul(X.T, y)
+        XTX = safe_matmul(X.T, X) + self.lmbda * torch.eye(self.input_dimension)
+        XTy = safe_matmul(X.T, y)
 
         train_time, train_energy, beta = run_with_measurement(
             lambda: torch.linalg.solve(XTX, XTy)
@@ -334,7 +359,7 @@ class LR(MlAlgorithm):
 
     def test(self):
         X = self.xts
-        test_time, test_energy, y_pred = run_with_measurement(lambda: torch.matmul(X, self.beta))
+        test_time, test_energy, y_pred = run_with_measurement(lambda: safe_matmul(X, self.beta))
 
         if self.target_normalization:
             y_pred = y_pred * self.y_std + self.y_mean
@@ -353,7 +378,7 @@ class LR(MlAlgorithm):
     def get_default_accuracy(self):
         # A reasonable default: return R² score
         with torch.no_grad():
-            y_pred = torch.matmul(self.xts, self.beta)
+            y_pred = safe_matmul(self.xts, self.beta)
             if self.target_normalization:
                 y_pred = y_pred * self.y_std + self.y_mean
 
@@ -473,3 +498,27 @@ def run_with_measurement(code):
     time_passed = float((time.time_ns() - time_start) / 10 ** 6)  # in ms
     energy_used = tracker.final_emissions_data.energy_consumed
     return time_passed, energy_used, results
+
+def estimate_matmul_memory(A: torch.Tensor, B: torch.Tensor, safety_factor=1.3):
+    dtype_size = torch.tensor([], dtype=A.dtype).element_size()
+    size_A = A.numel() * dtype_size
+    size_B = B.numel() * dtype_size
+    m, n, n2, p= 1,1,1,1
+    if(A.dim() == 1):
+        m = A.shape[0]
+    else:
+        m, n = A.shape[0], A.shape[1]
+    if (B.dim() == 1):
+        p = B.shape[0]
+    else:
+        n2, p = B.shape[0], B.shape[1]
+    # assert n == n2, "incompatible shapes"
+    size_out = m * p * dtype_size
+    total = (size_A + size_B + size_out) * safety_factor
+    return total
+
+def safe_matmul(A: torch.Tensor, B:torch.Tensor, safety_factor=1.3, limit=AS_LIMIT):
+    if(estimate_matmul_memory(A,B, safety_factor) > limit):
+        print("aborting matmul, ", (estimate_matmul_memory(A,B, safety_factor)))
+        raise MemoryError
+    return torch.matmul(A, B)
