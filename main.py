@@ -65,7 +65,7 @@ def chess_map(letter):
 
 def print_results(results: list[Experiment]):
     file_name = "results.txt"
-    with open("file.txt", "w", encoding="utf-8") as f:
+    with open(file_name, "a", encoding="utf-8") as f:
         for experiment in results:
             f.write("\n\n--------------------------------------------------------------------------\n")
             f.write("results for " + experiment.name + "\n")
@@ -78,6 +78,7 @@ def print_results(results: list[Experiment]):
                 f.write("mean " + measurement.name + ": " + str(measurement.get_mean()) + "\n")
                 f.write("std " + measurement.name + ": " + str(measurement.get_std()) + "\n")
                 # print("median ",measurement.name, ": ",measurement.get_median())
+            print("printed results for ", experiment.name)
 
 
 
