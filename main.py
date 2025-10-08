@@ -397,10 +397,6 @@ def test_mnist():
     x_ts = x_ts.view(x_ts.size(0), -1)  # shape: [10000, 784]
 
     y_ts = test_dataset.targets  # shape: [10000]
-    y_tr = torch.from_numpy(y_tr.argmax(axis=1))
-    y_ts = torch.from_numpy(y_ts.argmax(axis=1))
-    x_tr = numpy_to_float_tensor(x_tr)
-    x_ts = numpy_to_float_tensor(x_ts)
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 300, 30)
     experiments = []
@@ -571,12 +567,12 @@ def test_auto_price():
 as_limit = 8 * 1024 * 1024 * 1024
 def main():
     resource.setrlimit(resource.RLIMIT_AS,(as_limit , as_limit))
-    test_letters()
-    test_chess()
-    test_adult()
-    test_shuttle()
-    test_poker()
-    test_gamma()
+    # test_letters()
+    # test_chess()
+    # test_adult()
+    # test_shuttle()
+    # test_poker()
+    # test_gamma()
     test_mnist()
     # test_cifar_10()
     test_housing()
