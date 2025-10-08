@@ -567,12 +567,12 @@ def test_auto_price():
 as_limit = 8 * 1024 * 1024 * 1024
 def main():
     resource.setrlimit(resource.RLIMIT_AS,(as_limit , as_limit))
-    # test_letters()
-    # test_chess()
-    # test_adult()
-    # test_shuttle()
-    # test_poker()
-    # test_gamma()
+    test_letters()
+    test_chess()
+    test_adult()
+    test_shuttle()
+    test_poker()
+    test_gamma()
     test_mnist()
     # test_cifar_10()
     test_housing()
