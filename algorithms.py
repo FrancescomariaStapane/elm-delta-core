@@ -72,7 +72,7 @@ class RandomForest(MlAlgorithm):
     def test(self):
         time, energy, y_pred = run_with_measurement(lambda: self.random_forest_model.predict(self.xts))
         accuracy = accuracy_score(self.yts, y_pred)
-        f1 = f1_score(self.yts, y_pred, average='micro')
+        f1 = f1_score(self.yts, y_pred, average='weighted')
         return time, energy, (accuracy, f1)
         # print(f'Accuratezza del modello: {accuracy:.4f}')
         # print(f'F1: {f1:.4f}')
