@@ -14,7 +14,7 @@ import resource
 
 INFINITY = 10**12
 # INFINITY = 10**10
-AS_LIMIT = 0.3 * 1024 ** 3
+AS_LIMIT = 0.1 * 1024 ** 3
 
 class MlAlgorithm(ABC):
     def __init__(self, xtr, ytr, xts, yts):

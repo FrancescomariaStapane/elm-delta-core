@@ -93,30 +93,33 @@ def test_grid_search(model: MlAlgorithm, iterations: int, test_name: str):
         heatmap_data = initialize_heatmap_data(n_neuron_len, learning_rate_len)
         best_result = None
         best_accuracy = 0.0
-        for n_neuron in n_neuron_len:
-            for learning_rate in learning_rate_len:
-                print("\n\n--------------------")
-                print("n_neurons: ", n_neuron.item())
-                print("learning_rate: ", learning_rate.item())
+        try:
+            for n_neuron in n_neuron_len:
+                for learning_rate in learning_rate_len:
+                    print("\n\n--------------------")
+                    print("n_neurons: ", n_neuron.item())
+                    print("learning_rate: ", learning_rate.item())
 
-                model.n_neurons = n_neuron.item()
-                model.learning_rate = learning_rate.item()
-                model.refresh()
-                if not model.valid:
-                    return best_result
-                results = test_model_classification(model, iterations, test_name)
-                # ----------- HEATMAP -----------
-                n_neuron_idx = n_neuron_len.tolist().index(n_neuron)
-                lmda_idx = learning_rate_len.tolist().index(learning_rate)
-                mean_accuracy = results.get_repeated_measurement("accuracy").get_mean()
-                if mean_accuracy > best_accuracy:
-                    best_accuracy = mean_accuracy
-                    best_result = results
-                update_heatmap_data(heatmap_data, mean_accuracy, n_neuron_idx, lmda_idx)
-                # ----------- FINISH HEATMAP -----------
+                    model.n_neurons = n_neuron.item()
+                    model.learning_rate = learning_rate.item()
+                    model.refresh()
+                    if not model.valid:
+                        return best_result
+                    results = test_model_classification(model, iterations, test_name)
+                    # ----------- HEATMAP -----------
+                    n_neuron_idx = n_neuron_len.tolist().index(n_neuron)
+                    lmda_idx = learning_rate_len.tolist().index(learning_rate)
+                    mean_accuracy = results.get_repeated_measurement("accuracy").get_mean()
+                    if mean_accuracy > best_accuracy:
+                        best_accuracy = mean_accuracy
+                        best_result = results
+                    update_heatmap_data(heatmap_data, mean_accuracy, n_neuron_idx, lmda_idx)
+                    # ----------- FINISH HEATMAP -----------
 
-        # print("Test ended!")
-        plot_heatmap(heatmap_data, n_neuron_len, learning_rate_len, test_name,type = 'c')
+            # print("Test ended!")
+            plot_heatmap(heatmap_data, n_neuron_len, learning_rate_len, test_name,type = 'c')
+        except KeyboardInterrupt:
+            return best_result
         return best_result
     elif isinstance(model,Elm):
         n_neurons = torch.tensor([100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000])
@@ -455,7 +458,7 @@ def test_housing():
     x = scaler.fit_transform(x)
     x = torch.tensor(x, dtype=torch.float32)
     x_tr, y_tr, x_ts, y_ts  = slice_dataset_regression(x, y, 0.1)
-    elm = Elm(x_tr, y_tr, x_ts, y_ts, 1500, 0.01, original_features)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 100, 0.01, original_features)
     hpelm = HpElmRegression(x_tr, y_tr, x_ts, y_ts, 2500, 'sigm')
     # test_grid_search(elm, 1, "elm housing")
     experiments = []
@@ -476,7 +479,7 @@ def test_superconductivity():
     x = scaler.fit_transform(x)
     x = torch.tensor(x, dtype=torch.float32)
     x_tr, y_tr, x_ts, y_ts = slice_dataset_regression(x, y, 0.1)
-    elm = Elm(x_tr, y_tr, x_ts, y_ts, 1000, 0.01)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 100, 0.01)
     # test_grid_search(elm, 1, "elm superconductivity")
     experiments = []
     experiments.append(test_grid_search(elm, 3, "elm superconductivity"))
@@ -525,7 +528,7 @@ def test_nyctaxi():
     x = torch.tensor(x, dtype=torch.float32)
 
     x_tr, y_tr, x_ts, y_ts = slice_dataset_regression(x, y, 0.1)
-    elm = Elm(x_tr, y_tr, x_ts, y_ts, 200, 0.01)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 100, 0.01)
     # hpelm = HpElmRegression(x_tr, y_tr, x_ts, y_ts, 500, 'sigm')
     experiments = []
     experiments.append(test_grid_search(elm, 3, "elm nyctaxi"))
@@ -576,24 +579,69 @@ def test_auto_price():
     experiments.append(test_grid_search(elm, 10, "auto price"))
     print_results(experiments)
 
+def test_news():
+    df = pd.read_csv("datasets/OnlineNewsPopularity.csv")
+    df = df.dropna()
+    # y = df['median_house_value'].to_numpy(dtype=float)
+    target_column = ' shares'
+    y = torch.tensor(df[target_column].values, dtype=torch.float32)
+    x = df.drop(columns=[target_column, 'url'])
+    # x = df.drop(columns=['url'])
+    # x = torch.tensor(x, dtype=torch.float32)
+    # x = pd.DataFrame.to_numpy(x.values, dtype=torch.float32)
+    x = torch.tensor(x.values, dtype=torch.float32)
+    scaler = StandardScaler()
+    x = scaler.fit_transform(x)
+    x = torch.tensor(x, dtype=torch.float32)
+    # x = torch.tensor(x, dtype=torch.float32)
+    x_tr, y_tr, x_ts, y_ts  = slice_dataset_regression(x, y, 0.1)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 100, 0.01)
+    experiments = []
+    experiments.append(test_grid_search(elm, 3, "elm news"))
+    # experiments.append(test_model_regression(elm, 1, "elm housing"))
+    print_results(experiments)
 
+def test_blog():
+    df = pd.read_csv("datasets/blogData_train.csv")
+    df.columns = [[("C"+str(i+1)) for i in range(df.shape[1])]]
+    df = df.dropna()
+    df = df.head(10000)
+    # y = df['median_house_value'].to_numpy(dtype=float)
+    target_column = 'C281'
+    y = torch.tensor(df[target_column].values, dtype=torch.float32)
+    #
+    x = df.drop(columns=[("C"+str(i)) for i in range(1,51)])
+    # x = df.drop(columns=['url'])
+    # x = torch.tensor(x, dtype=torch.float32)
+    # x = pd.DataFrame.to_numpy(x.values, dtype=torch.float32)
+    x = torch.tensor(x.values, dtype=torch.float32)
+    scaler = StandardScaler()
+    x = scaler.fit_transform(x)
+    x = torch.tensor(x, dtype=torch.float32)
+    # x = torch.tensor(x, dtype=torch.float32)
+    x_tr, y_tr, x_ts, y_ts  = slice_dataset_regression(x, y, 0.1)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 1000, 0.01)
+    experiments = []
+    experiments.append(test_model_regression(elm, 3, "elm blog"))
+    # experiments.append(test_model_regression(elm, 1, "elm housing"))
+    print_results(experiments)
 as_limit = 8 * 1024 * 1024 * 1024
 def main():
     resource.setrlimit(resource.RLIMIT_AS,(as_limit , as_limit))
-    test_letters()
-    test_chess()
-    test_adult()
-    test_shuttle()
-    test_poker()
-    test_gamma()
-    test_mnist()
-    # test_cifar_10()
+    # test_letters()
+    # test_chess()
+    # test_adult()
+    # test_shuttle()
     test_housing()
     test_zurich_transport()
     test_superconductivity()
     test_nyctaxi()
     test_cifar_10()
     test_medical()
-    # test_auto_price()
+    test_blog()
+    test_poker()
+    test_gamma()
+    test_mnist()
+
 if __name__ == '__main__':
     main()
