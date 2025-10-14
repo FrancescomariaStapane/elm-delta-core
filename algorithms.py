@@ -38,6 +38,10 @@ class MlAlgorithm(ABC):
     def get_default_accuracy(self):
         pass
 
+    def get_final_m_features(self):
+        return self.xtr.shape[1]
+
+
 
 class RandomForest(MlAlgorithm):
     def __init__(self, xtr, ytr, xts, yts, n_estimators, max_depth):
@@ -95,8 +99,9 @@ def new_tracker():
     )
     return tracker
 
+
 class CrossEntropyElm(MlAlgorithm):
-    def __init__(self, xtr, ytr, xts, yts, n_neurons, learning_rate):
+    def __init__(self, xtr, ytr, xts, yts, n_neurons, learning_rate, n_features = -1):
         # ytr = torch.from_numpy(ytr.argmax(axis = 1))
         # yts = torch.from_numpy(yts.argmax(axis = 1))
         super().__init__(xtr, ytr, xts, yts)
@@ -104,6 +109,12 @@ class CrossEntropyElm(MlAlgorithm):
         self.learning_rate = learning_rate
         self.W, self.b = random_weights(len(self.xtr[0]), self.n_neurons)
         self.beta = []
+        if n_features != -1:
+            self.n_original_features = n_features
+        else:
+            self.n_original_features = len(self.xtr[0])
+
+
 
     def refresh(self):
         self.W, self.b = random_weights(len(self.xtr[0]), self.n_neurons)
@@ -127,7 +138,20 @@ class CrossEntropyElm(MlAlgorithm):
         most_common_class = torch.mode(self.yts).values
         default_accuracy = (self.yts == most_common_class).sum().item() / self.yts.size(0)
         return default_accuracy
-def rae(y_real, y_pred):
+
+    def get_n_neurons(self):
+        return self.n_neurons
+
+    def get_learning_rate(self):
+        return self.learning_rate
+
+    def get_n_classes(self):
+        # return self.n_classes
+        return self.ytr.unique().numel()
+
+    def get_original_n_features(self):
+        return self.n_original_features
+def mase(y_real, y_pred):
     abs_error = 0
     avg_real = 0
     for i in range(y_real.shape[0]):
@@ -165,14 +189,17 @@ def sigmoid(X, W, b):
     z = safe_matmul(X, W) + b
     return torch.sigmoid(z)
 
+
+
 class Elm(MlAlgorithm):
-    def __init__(self, xtr, ytr, xts, yts, n_neurons, lmbda):
+    def __init__(self, xtr, ytr, xts, yts, n_neurons, lmbda, n_features=-1):
         super().__init__(xtr, ytr, xts, yts)
         try:
             # print("limit: ", resource.getrlimit(resource.RLIMIT_AS))
             # target normalization
             self.interval = torch.cat([ytr, yts]).max() - torch.cat([ytr, yts]).min()
             self.target_normalization = True
+            self.lmbda = lmbda
             if self.target_normalization:
                 self.y_mean = self.ytr.mean()
                 self.y_std = self.ytr.std()
@@ -182,7 +209,10 @@ class Elm(MlAlgorithm):
             self.W = torch.randn(self.input_dimension, self.n_neurons)
             self.b = torch.randn(1, self.n_neurons)
             self.h = sigmoid(self.xtr, self.W, self.b)
-            self.lmbda = lmbda
+            if n_features != -1:
+                self.n_original_features = n_features
+            else:
+                self.n_original_features = len(self.xtr[0])
         except MemoryError:
             self.valid = False
 
@@ -211,7 +241,7 @@ class Elm(MlAlgorithm):
                 y_pred = y_pred * self.y_std + self.y_mean
             loss = sse(self.yts , y_pred)
             mean_loss = loss / self.yts.size(0)
-            rae_ = rae(self.yts, y_pred)
+            rae_ = mase(self.yts, y_pred)
             return test_time, test_energy, (mean_loss, rae_)
         return INFINITY, INFINITY, (INFINITY, INFINITY)
     def refresh(self):
@@ -225,6 +255,15 @@ class Elm(MlAlgorithm):
 
     def get_default_accuracy(self):
         pass
+
+    def get_n_neurons(self):
+        return self.n_neurons
+
+    def get_lambda(self):
+        return self.lmbda
+
+    def get_original_n_features(self):
+        return self.n_original_features
 class NN(MlAlgorithm):
     def __init__(self, xtr, ytr, xts, yts, n_neurons=[64, 32], lmbda=0.0,
                  lr=0.001, epochs=100, batch_size=32, activation=nn.ReLU, device="cpu"):
@@ -304,7 +343,7 @@ class NN(MlAlgorithm):
 
         loss = sse(y_true, y_pred)
         mean_loss = loss / y_true.size(0)
-        rae_ = rae(y_true, y_pred)
+        rae_ = mase(y_true, y_pred)
 
         return test_time, test_energy, (mean_loss, rae_)
 
@@ -366,7 +405,7 @@ class LR(MlAlgorithm):
 
         loss = sse(self.yts, y_pred)
         mean_loss = loss / self.yts.size(0)
-        rae_ = rae(self.yts, y_pred)
+        rae_ = mase(self.yts, y_pred)
 
         return test_time, test_energy, (mean_loss, rae_)
 

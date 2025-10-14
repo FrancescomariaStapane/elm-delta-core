@@ -156,7 +156,7 @@ def test_grid_search(model: MlAlgorithm, iterations: int, test_name: str):
         plot_heatmap(heatmap_data, n_neurons, lmbdas, test_name, type = 'r')
         return best_result
 
-def test_model_classification(model: MlAlgorithm, iterations: int, test_name: str):
+def test_model_classification(model: CrossEntropyElm, iterations: int, test_name: str):
     train_times = []
     test_times = []
     accuracies = []
@@ -187,33 +187,39 @@ def test_model_classification(model: MlAlgorithm, iterations: int, test_name: st
     ]
 
     single_measurements = [
-        ExperimentInfo("default accuracy",model.get_default_accuracy())
+        ExperimentInfo("default accuracy",model.get_default_accuracy()),
+        ExperimentInfo("neurons", model.get_n_neurons()),
+        ExperimentInfo("learning rate", model.get_learning_rate()),
+        ExperimentInfo("final n. features", model.get_final_m_features()),
+        ExperimentInfo("original n. features", model.get_original_n_features()),
+        ExperimentInfo("classes", model.get_n_classes()),
+
     ]
     experiment = Experiment(test_name, single_measurements, repeated_measurements)
     return experiment
 
-def test_model_regression(model: MlAlgorithm, iterations: int, test_name: str):
+def test_model_regression(model: Elm, iterations: int, test_name: str):
     train_times = []
     test_times = []
     normalized_losses = []
     train_energies = []
     test_energies = []
     percentage_errors = []
-    raes = []
+    mases = []
     print("limiting memory")
     for i in range(iterations):
         model.refresh()
         train_time, train_energy = model.learn()
         test_time, test_energy, returns = model.test()
         rmse = np.sqrt(returns[0])
-        rae = returns[1] * 100
+        mase = returns[1]
         train_times.append(train_time)
         test_times.append(test_time)
         normalized_losses.append(rmse)
         train_energies.append(train_energy)
         test_energies.append(test_energy)
         percentage_errors.append(rmse / model.interval * 100)
-        raes.append(rae)
+        mases.append(mase)
     repeated_measurements = [
         RepeatedMeasurement("train time (ms)", train_times),
         RepeatedMeasurement("test time (ms)", test_times),
@@ -221,13 +227,15 @@ def test_model_regression(model: MlAlgorithm, iterations: int, test_name: str):
         RepeatedMeasurement("test energy (kWh)", test_energies),
         RepeatedMeasurement("RMSE", normalized_losses),
         RepeatedMeasurement("Error percentage over target interval (%)", percentage_errors),
-        RepeatedMeasurement("rae (%)", raes),
+        RepeatedMeasurement("mase", mases),
     ]
 
-    single_measurements = []
-    single_measurements.append(ExperimentInfo("training instances", model.xtr.shape[0]))
-    single_measurements.append(ExperimentInfo("n. of features", model.xtr.shape[1]))
-    single_measurements.append(ExperimentInfo("max target - min target", float(model.interval)))
+    single_measurements = [ExperimentInfo("neurons", model.get_n_neurons()),
+                           ExperimentInfo("learning rate", model.get_lambda()),
+                           ExperimentInfo("final n. features", model.get_final_m_features()),
+                           ExperimentInfo("original n. features", model.get_original_n_features()),
+                           ExperimentInfo("training instances", model.xtr.shape[0]),
+                           ExperimentInfo("max target - min target", float(model.interval))]
     experiment = Experiment(test_name, single_measurements, repeated_measurements)
     return experiment
 
@@ -246,10 +254,11 @@ def test_letters():
     x_tr = numpy_to_float_tensor(x_tr)
     x_ts = numpy_to_float_tensor(x_ts)
     rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 1000, 15)
-    elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 800, 0.01)
+    elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 200, 0.01)
     experiments = []
+    # experiments.append(test_model_classification(elm_model, 1, "elm letters"))
     experiments.append(test_grid_search(elm_model, 3, "elm letters"))
-    experiments.append(test_model_classification(rf_model, 3, "rf letters"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf letters"))
     print_results(experiments)
 
 def test_chess():
@@ -275,7 +284,7 @@ def test_chess():
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 1500, 0.1)
     experiments = []
     experiments.append(test_grid_search(elm_model, 3, "elm chess"))
-    experiments.append(test_model_classification(rf_model, 3, "rf chess"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf chess"))
     print_results(experiments)
 
 def test_adult():
@@ -285,6 +294,7 @@ def test_adult():
     map = {'<=50K': 0, '<=50K.': 0, '>50K': 1, '>50K.': 1}
     y = y.map(map)
 
+    original_features = x.shape[1]
     categorical_features = []
     for i in [1, 3, 5, 6, 7, 8, 9, 13]:
         categorical_features.append(dataset.data.features.columns[i])
@@ -303,10 +313,11 @@ def test_adult():
     # rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 50, 5)
     rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 300, 30)
     # elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 80, 0.01)
-    elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
+    elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01, original_features)
     experiments = []
+    # experiments.append(test_model_classification(elm_model, 1, "elm adult"))
     experiments.append(test_grid_search(elm_model, 3, "elm adult"))
-    experiments.append(test_model_classification(rf_model, 3, "rf adult"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf adult"))
     print_results(experiments)
 
 def test_shuttle():
@@ -329,7 +340,7 @@ def test_shuttle():
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     experiments = []
     experiments.append(test_grid_search(elm_model, 3, "elm shuttle"))
-    experiments.append(test_model_classification(rf_model, 3, "rf shuttle"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf shuttle"))
     print_results(experiments)
 
 def test_poker():
@@ -352,7 +363,7 @@ def test_poker():
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     experiments = []
     experiments.append(test_grid_search(elm_model, 3, "elm poker"))
-    experiments.append(test_model_classification(rf_model, 3, "rf poker"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf poker"))
     print_results(experiments)
 
 
@@ -375,8 +386,8 @@ def test_gamma():
     # elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 80, 0.01)
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     experiments = []
-    experiments.append(test_grid_search(elm_model, 1, "elm gamma"))
-    experiments.append(test_model_classification(rf_model, 1, "rf gamma"))
+    experiments.append(test_grid_search(elm_model, 3, "elm gamma"))
+    # experiments.append(test_model_classification(rf_model, 1, "rf gamma"))
     print_results(experiments)
 
 
@@ -400,8 +411,8 @@ def test_mnist():
     elm_model = CrossEntropyElm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 300, 30)
     experiments = []
-    experiments.append(test_grid_search(elm_model, 1, "elm mnist"))
-    experiments.append(test_model_classification(rf_model, 3, "rf mnist"))
+    experiments.append(test_grid_search(elm_model, 3, "elm mnist"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf mnist"))
     print_results(experiments)
 
 def test_cifar_10():
@@ -426,8 +437,8 @@ def test_cifar_10():
     rf_model = RandomForest(x_tr, y_tr, x_ts, y_ts, 300, 30)
     experiments = []
     # experiments.append(test_grid_search(elm_model, 1, "elm cifar10"))
-    experiments.append(test_grid_search(elm_model, 1, "elm cifar10"))
-    experiments.append(test_model_classification(rf_model, 3, "rf cifar10"))
+    experiments.append(test_grid_search(elm_model, 3, "elm cifar10"))
+    # experiments.append(test_model_classification(rf_model, 3, "rf cifar10"))
     print_results(experiments)
 
 def test_housing():
@@ -436,6 +447,7 @@ def test_housing():
     # y = df['median_house_value'].to_numpy(dtype=float)
     y = torch.tensor(df['median_house_value'].values, dtype=torch.float32)
     x = df.drop(columns=['median_house_value'])
+    original_features = x.shape[1]
     x = one_hot_encode_features(x, ["ocean_proximity"]).to_numpy(dtype=float)
     x = torch.tensor(x, dtype=torch.float32)
     # x = pd.DataFrame.to_numpy(x.values, dtype=torch.float32)
@@ -443,11 +455,12 @@ def test_housing():
     x = scaler.fit_transform(x)
     x = torch.tensor(x, dtype=torch.float32)
     x_tr, y_tr, x_ts, y_ts  = slice_dataset_regression(x, y, 0.1)
-    elm = Elm(x_tr, y_tr, x_ts, y_ts, 1500, 0.01)
+    elm = Elm(x_tr, y_tr, x_ts, y_ts, 1500, 0.01, original_features)
     hpelm = HpElmRegression(x_tr, y_tr, x_ts, y_ts, 2500, 'sigm')
     # test_grid_search(elm, 1, "elm housing")
     experiments = []
-    experiments.append(test_grid_search(elm, 5, "elm housing"))
+    experiments.append(test_grid_search(elm, 3, "elm housing"))
+    # experiments.append(test_model_regression(elm, 1, "elm housing"))
     print_results(experiments)
 
 def test_superconductivity():
@@ -492,7 +505,7 @@ def test_zurich_transport():
     experiments = []
     print("testing")
     # experiments.append(test_model_regression(elm, 5, "elm zurich transport"))
-    experiments.append(test_grid_search(elm, 2, "elm zurich transport"))
+    experiments.append(test_grid_search(elm, 3, "elm zurich transport"))
     print_results(experiments)
     # test_grid_search(elm, 1, "elm zurich transport")
 
@@ -515,7 +528,7 @@ def test_nyctaxi():
     elm = Elm(x_tr, y_tr, x_ts, y_ts, 200, 0.01)
     # hpelm = HpElmRegression(x_tr, y_tr, x_ts, y_ts, 500, 'sigm')
     experiments = []
-    experiments.append(test_grid_search(elm, 10, "elm nyctaxi"))
+    experiments.append(test_grid_search(elm, 3, "elm nyctaxi"))
     print_results(experiments)
 
 def test_medical():
@@ -537,7 +550,7 @@ def test_medical():
     elm = Elm(x_tr, y_tr, x_ts, y_ts, 500, 0.01)
     # hpelm = HpElmRegression(x_tr, y_tr, x_ts, y_ts, 500, 'sigm')
     experiments = []
-    experiments.append(test_grid_search(elm, 10, "medical expenses"))
+    experiments.append(test_grid_search(elm, 3, "medical expenses"))
     print_results(experiments)
 
 def test_auto_price():
@@ -581,6 +594,6 @@ def main():
     test_nyctaxi()
     test_cifar_10()
     test_medical()
-    test_auto_price()
+    # test_auto_price()
 if __name__ == '__main__':
     main()

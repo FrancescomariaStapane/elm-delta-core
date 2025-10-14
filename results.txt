@@ -1,0 +1,245 @@
+
+
+--------------------------------------------------------------------------
+results for elm zurich transport
+
+training instances: 180000
+n. of features: 8
+max target - min target: 18.953697204589844
+number of measurements: 2
+
+mean train time (ms): 920.7241905000001
+std train time (ms): 8.360685499999988
+
+mean test time (ms): 507.751655
+std test time (ms): 0.33014399999999
+
+mean train energy (kWh): 3.441813774924738e-06
+std train energy (kWh): 3.1882439850353526e-08
+
+mean test energy (kWh): 1.8897103074880209e-06
+std test energy (kWh): 1.706811659922687e-10
+
+mean RMSE: 3.133452
+std RMSE: 0.0018630028
+
+mean Error percentage over target interval (%): 16.53214
+std Error percentage over target interval (%): 0.0098285675
+
+mean rae (%): 97.17256
+std rae (%): 0.066028595
+
+
+--------------------------------------------------------------------------
+results for elm zurich transport
+
+neurons: 100
+learning rate: 1
+features: 8
+training instances: 180000
+max target - min target: 18.953697204589844
+number of measurements: 2
+
+mean train time (ms): 896.6643505
+std train time (ms): 13.726737499999956
+
+mean test time (ms): 507.156209
+std test time (ms): 0.08964700000001358
+
+mean train energy (kWh): 3.3493429035590703e-06
+std train energy (kWh): 5.254325797362099e-08
+
+mean test energy (kWh): 1.8897626307552953e-06
+std test energy (kWh): 7.882668164127647e-10
+
+mean RMSE: 3.133645
+std RMSE: 0.002313733
+
+mean Error percentage over target interval (%): 16.533161
+std Error percentage over target interval (%): 0.012207985
+
+mean mase: 0.9719523
+std mase: 0.0008995235
+
+
+--------------------------------------------------------------------------
+results for elm letters
+
+default accuracy: 0.0405
+neurons: 200
+learning rate: 0.01
+features: 16
+classes: None
+number of measurements: 1
+
+mean train time (ms): 35027.066586
+std train time (ms): 0.0
+
+mean test time (ms): 550.7905
+std test time (ms): 0.0
+
+mean train energy (kWh): 0.00013539769595474635
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 2.057859384594203e-06
+std test energy (kWh): 0.0
+
+mean accuracy: 0.7224444
+std accuracy: 0.0
+
+mean f1: 0.7222938690664572
+std f1: 0.0
+
+
+--------------------------------------------------------------------------
+results for elm letters
+
+default accuracy: 0.0405
+neurons: 200
+learning rate: 0.01
+features: 16
+classes: 26
+number of measurements: 1
+
+mean train time (ms): 34293.477031
+std train time (ms): 0.0
+
+mean test time (ms): 580.992697
+std test time (ms): 0.0
+
+mean train energy (kWh): 0.00013303234897203044
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 2.170850965197781e-06
+std test energy (kWh): 0.0
+
+mean accuracy: 0.7285
+std accuracy: 0.0
+
+mean f1: 0.7285504599868659
+std f1: 0.0
+
+
+--------------------------------------------------------------------------
+results for elm letters
+
+default accuracy: 0.0405
+neurons: 200
+learning rate: 0.01
+final n. features: 16
+original n. features: 16
+classes: 26
+number of measurements: 1
+
+mean train time (ms): 32421.338416
+std train time (ms): 0.0
+
+mean test time (ms): 551.757871
+std test time (ms): 0.0
+
+mean train energy (kWh): 0.00012558048549507882
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 2.0589856083175916e-06
+std test energy (kWh): 0.0
+
+mean accuracy: 0.7558333
+std accuracy: 0.0
+
+mean f1: 0.7560859774518384
+std f1: 0.0
+
+
+--------------------------------------------------------------------------
+results for elm adult
+
+default accuracy: 0.7606960081883316
+neurons: 500
+learning rate: 0.01
+final n. features: 108
+original n. features: 14
+classes: 2
+number of measurements: 1
+
+mean train time (ms): 120887.848413
+std train time (ms): 0.0
+
+mean test time (ms): 796.797609
+std test time (ms): 0.0
+
+mean train energy (kWh): 0.000561386366032951
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 2.9810343600490987e-06
+std test energy (kWh): 0.0
+
+mean accuracy: 0.7861546
+std accuracy: 0.0
+
+mean f1: 0.7216075170178168
+std f1: 0.0
+
+
+--------------------------------------------------------------------------
+results for elm housing
+
+neurons: 1500
+learning rate: 0.01
+features: 13
+training instances: 18389
+max target - min target: 485002.0
+number of measurements: 1
+
+mean train time (ms): 1543.556599
+std train time (ms): 0.0
+
+mean test time (ms): 507.355415
+std test time (ms): 0.0
+
+mean train energy (kWh): 5.777687578412735e-06
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 1.8872495915837176e-06
+std test energy (kWh): 0.0
+
+mean RMSE: 56114.36
+std RMSE: 0.0
+
+mean Error percentage over target interval (%): 11.569923
+std Error percentage over target interval (%): 0.0
+
+mean mase: 0.4074758
+std mase: 0.0
+
+
+--------------------------------------------------------------------------
+results for elm housing
+
+neurons: 1500
+learning rate: 0.01
+final n. features: 13
+original n. features: 9
+training instances: 18389
+max target - min target: 485002.0
+number of measurements: 1
+
+mean train time (ms): 1595.413005
+std train time (ms): 0.0
+
+mean test time (ms): 508.358318
+std test time (ms): 0.0
+
+mean train energy (kWh): 5.980434998371812e-06
+std train energy (kWh): 0.0
+
+mean test energy (kWh): 1.9838752333145775e-06
+std test energy (kWh): 0.0
+
+mean RMSE: 57234.13
+std RMSE: 0.0
+
+mean Error percentage over target interval (%): 11.800802
+std Error percentage over target interval (%): 0.0
+
+mean mase: 0.41066018
+std mase: 0.0
